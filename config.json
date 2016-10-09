@@ -1,0 +1,6 @@
+{
+  "domain": "domain.com",
+  "subdomain": "ddns",
+  "api_key": "your_namesilo_api_key",
+  "ttl": 3600
+}
