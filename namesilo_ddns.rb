@@ -89,8 +89,6 @@ raw_response = RestClient.get 'https://www.namesilo.com/api/dnsListRecords', {pa
 response = xml_parser.parse(raw_response)
 raise "Unsuccessful response #{response}" unless raw_response.code == 200
 
-
-
 resource_records = response.dig('namesilo', 'reply', 'resource_record')
 
 raise "No resource records provided: #{response}" unless resource_records
