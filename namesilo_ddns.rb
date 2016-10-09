@@ -26,45 +26,45 @@ raise "The following config keys are required but not set: #{undefined_keys}.  P
 
 def create_record(type, value)
   puts "Creating Record #{type}: #{value}"
-  # raw_response = RestClient.get 'https://www.namesilo.com/api/dnsAddRecord', {params: {
-  #   version: 1,
-  #   type: 'xml',
-  #   key: CONFIG['api_key'],
-  #   domain: CONFIG['domain'],
-  #   rrtype: type,
-  #   rrhost: CONFIG['subdomain'],
-  #   rrvalue: value,
-  #   rrttl: CONFIG['ttl']
-  # }}
+  raw_response = RestClient.get 'https://www.namesilo.com/api/dnsAddRecord', {params: {
+    version: 1,
+    type: 'xml',
+    key: CONFIG['api_key'],
+    domain: CONFIG['domain'],
+    rrtype: type,
+    rrhost: CONFIG['subdomain'],
+    rrvalue: value,
+    rrttl: CONFIG['ttl']
+  }}
   response = xml_parser.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
 end
 
 def replace_record(record, value)
   puts "Replacing Record #{record} with #{value}"
-  # raw_response = RestClient.get 'https://www.namesilo.com/api/dnsUpdateRecord', {params: {
-  #   version: 1,
-  #   type: 'xml',
-  #   key: CONFIG['api_key'],
-  #   domain: CONFIG['domain'],
-  #   rrid: record['record_id'],
-  #   rrhost: CONFIG['subdomain'],
-  #   rrvalue: value,
-  #   rrttl: CONFIG['ttl']
-  # }}
+  raw_response = RestClient.get 'https://www.namesilo.com/api/dnsUpdateRecord', {params: {
+    version: 1,
+    type: 'xml',
+    key: CONFIG['api_key'],
+    domain: CONFIG['domain'],
+    rrid: record['record_id'],
+    rrhost: CONFIG['subdomain'],
+    rrvalue: value,
+    rrttl: CONFIG['ttl']
+  }}
   response = xml_parser.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
 end
 
 def delete_record(record)
   puts "Deleting Record #{record}"
-  # raw_response = RestClient.get 'https://www.namesilo.com/api/dnsDeleteRecord', {params: {
-  #   version: 1,
-  #   type: 'xml',
-  #   key: CONFIG['api_key'],
-  #   domain: CONFIG['domain'],
-  #   rrid: record['record_id'],
-  # }}
+  raw_response = RestClient.get 'https://www.namesilo.com/api/dnsDeleteRecord', {params: {
+    version: 1,
+    type: 'xml',
+    key: CONFIG['api_key'],
+    domain: CONFIG['domain'],
+    rrid: record['record_id'],
+  }}
   response = xml_parser.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
 end
