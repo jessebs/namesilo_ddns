@@ -7,19 +7,14 @@ require 'ipaddress'
 
 puts "Beginning execution at #{Time.now}"
 
-GLOBAL_CONFIG = '/etc/namesilo_ddns/config.json'
+CONFIG_FILE = '/etc/namesilo_ddns/config.json'
 LOCAL_CONFIG = File.join(__dir__, 'config.json')
 REQUIRED_KEYS = %W(domain subdomain ttl api_key)
 
-config_file = nil
-config_file ||= GLOBAL_CONFIG if File.file? GLOBAL_CONFIG
-config_file ||= LOCAL_CONFIG if File.file? LOCAL_CONFIG
+raise "Unable to find config file at #{CONFIG_FILE}.  Copy #{LOCAL_CONFIG} to #{CONFIG_FILE}" unless File.file? CONFIG_FILE
 
-raise "Unable to find config file at #{GLOBAL_CONFIG} or #{LOCAL_CONFIG}" unless config_file
 
-puts "Using config file #{config_file}"
-
-CONFIG = JSON.parse(File.read(config_file))
+CONFIG = JSON.parse(File.read(CONFIG_FILE))
 undefined_keys = (REQUIRED_KEYS - CONFIG.keys)
 
 raise "The following config keys are required but not set: #{undefined_keys}.  Please check config." unless undefined_keys.empty?
