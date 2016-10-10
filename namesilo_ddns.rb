@@ -13,8 +13,9 @@ CONFIG_FILE = '/etc/namesilo_ddns/config.json'
 LOCAL_CONFIG = File.join(__dir__, 'config.json')
 REQUIRED_KEYS = %W(domain subdomain ttl api_key)
 
-raise "Unable to find config file at #{CONFIG_FILE}.  Copy #{LOCAL_CONFIG} to #{CONFIG_FILE}" unless File.file? CONFIG_FILE
+XML_PARSER = Nori.new(:parser => :rexml)
 
+raise "Unable to find config file at #{CONFIG_FILE}.  Copy #{LOCAL_CONFIG} to #{CONFIG_FILE}" unless File.file? CONFIG_FILE
 
 CONFIG = JSON.parse(File.read(CONFIG_FILE))
 undefined_keys = (REQUIRED_KEYS - CONFIG.keys)
@@ -33,7 +34,7 @@ def create_record(type, value)
     rrvalue: value,
     rrttl: CONFIG['ttl']
   }}
-  response = xml_parser.parse(raw_response)
+  response = XML_PARSER.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
 end
 
@@ -49,7 +50,7 @@ def replace_record(record, value)
     rrvalue: value,
     rrttl: CONFIG['ttl']
   }}
-  response = xml_parser.parse(raw_response)
+  response = XML_PARSER.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
 end
 
@@ -62,7 +63,7 @@ def delete_record(record)
     domain: CONFIG['domain'],
     rrid: record['record_id'],
   }}
-  response = xml_parser.parse(raw_response)
+  response = XML_PARSER.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
 end
 
@@ -80,10 +81,8 @@ end
 
 puts "IP Address: #{ip}"
 
-xml_parser = Nori.new(:parser => :rexml)
-
 raw_response = RestClient.get 'https://www.namesilo.com/api/dnsListRecords', {params: {version: 1, type: 'xml', key: CONFIG['api_key'], domain: CONFIG['domain']}}
-response = xml_parser.parse(raw_response)
+response = XML_PARSER.parse(raw_response)
 raise "Unsuccessful response #{response}" unless raw_response.code == 200
 
 resource_records = response.dig('namesilo', 'reply', 'resource_record')
