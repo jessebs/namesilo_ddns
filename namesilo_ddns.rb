@@ -59,7 +59,7 @@ end
 
 def replace_record(current_record, domain, subdomain, value)
   if current_record['value'] == value
-    puts "Record #{subdomain}.#{domain}  is already up to date"
+    puts "Record #{subdomain}.#{domain} is already up to date"
     return
   end
 
