@@ -1,6 +1,9 @@
 {
-  "domain": "domain.com",
-  "subdomain": "ddns",
   "api_key": "your_namesilo_api_key",
-  "ttl": 3600
+  "ttl": 3600,
+
+  "domains": {
+    "domain.com": "ddns",
+    "domain2.com": ["ddns1", "ddns2"]
+  }
 }

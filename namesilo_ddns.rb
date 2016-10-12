@@ -11,7 +11,8 @@ puts "Beginning execution at #{Time.now}"
 
 CONFIG_FILE = '/etc/namesilo_ddns/config.json'
 LOCAL_CONFIG = File.join(__dir__, 'config.json')
-REQUIRED_KEYS = %W(domain subdomain ttl api_key)
+REQUIRED_KEYS = %W(domains ttl api_key)
+REPLACEMENT_TYPES = %w(A AAAA CNAME)
 
 XML_PARSER = Nori.new(:parser => :rexml)
 
@@ -22,91 +23,107 @@ undefined_keys = (REQUIRED_KEYS - CONFIG.keys)
 
 raise "The following config keys are required but not set: #{undefined_keys}.  Please check config." unless undefined_keys.empty?
 
-def create_record(type, value)
-  puts "Creating Record #{type}: #{value}"
+API_KEY = CONFIG['api_key']
+TTL = CONFIG['ttl']
+
+def get_record_type(value)
+  IPAddress(value).is_a?(IPAddress::IPv4) ? 'A' : 'AAAA'
+rescue ArgumentError
+  'CNAME'
+end
+
+def get_records(domain)
+  puts "Getting records for #{domain}"
+  raw_response = RestClient.get 'https://www.namesilo.com/api/dnsListRecords', {params: {version: 1, type: 'xml', key: API_KEY, domain: domain}}
+  response = XML_PARSER.parse(raw_response)
+  raise "Unsuccessful response #{response}" unless raw_response.code == 200
+  response
+end
+
+def create_record(domain, subdomain, type, value)
+  puts "Creating Record #{type}: #{subdomain}.#{domain} => #{value}"
   raw_response = RestClient.get 'https://www.namesilo.com/api/dnsAddRecord', {params: {
     version: 1,
     type: 'xml',
-    key: CONFIG['api_key'],
-    domain: CONFIG['domain'],
+    key: API_KEY,
+    domain: domain,
     rrtype: type,
-    rrhost: CONFIG['subdomain'],
+    rrhost: subdomain,
     rrvalue: value,
-    rrttl: CONFIG['ttl']
+    rrttl: TTL
   }}
   response = XML_PARSER.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
+  response
 end
 
-def replace_record(record, value)
-  puts "Replacing Record #{record} with #{value}"
+def replace_record(current_record, domain, subdomain, value)
+  puts "Replacing Record #{subdomain}.#{domain} with #{value}"
+  return if current_record['value'] == value
+
   raw_response = RestClient.get 'https://www.namesilo.com/api/dnsUpdateRecord', {params: {
     version: 1,
     type: 'xml',
-    key: CONFIG['api_key'],
-    domain: CONFIG['domain'],
-    rrid: record['record_id'],
-    rrhost: CONFIG['subdomain'],
+    key: API_KEY,
+    domain: domain,
+    rrid: current_record['record_id'],
+    rrhost: subdomain,
     rrvalue: value,
-    rrttl: CONFIG['ttl']
+    rrttl: TTL
   }}
   response = XML_PARSER.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
+  response
 end
 
-def delete_record(record)
+def delete_record(record, domain)
   puts "Deleting Record #{record}"
   raw_response = RestClient.get 'https://www.namesilo.com/api/dnsDeleteRecord', {params: {
     version: 1,
     type: 'xml',
-    key: CONFIG['api_key'],
-    domain: CONFIG['domain'],
+    key: API_KEY,
+    domain: domain,
     rrid: record['record_id'],
   }}
   response = XML_PARSER.parse(raw_response)
   raise "Unsuccessful response #{response}" unless raw_response.code == 200
+  response
 end
 
+
+
+#### EXECUTION ####
 response = RestClient.get 'https://api.ipify.org', {params: {format: 'json'}}
 response = JSON.parse(response)
 
 ip = response['ip']
 raise "No IP provided.  #{response}" unless ip
 
-if IPAddress(ip).is_a?(IPAddress::IPv4)
-  target_type = 'A'
-else
-  target_type = 'AAAA'
-end
-
 puts "IP Address: #{ip}"
 
-raw_response = RestClient.get 'https://www.namesilo.com/api/dnsListRecords', {params: {version: 1, type: 'xml', key: CONFIG['api_key'], domain: CONFIG['domain']}}
-response = XML_PARSER.parse(raw_response)
-raise "Unsuccessful response #{response}" unless raw_response.code == 200
+target_type = get_record_type(ip)
 
-resource_records = response.dig('namesilo', 'reply', 'resource_record')
+CONFIG['domains'].each do |domain, subdomains|
+  subdomains = [subdomains] unless subdomains.is_a? Array
 
-raise "No resource records provided: #{response}" unless resource_records
+  records = get_records(domain)
+  resource_records = records.dig('namesilo', 'reply', 'resource_record')
 
-current_record = nil
 
-resource_records.each do |record|
-  if record['host'] == "#{CONFIG['subdomain']}.#{CONFIG['domain']}" && (record['type'] == 'CNAME' || record['type'] == 'A' || record['type'] == 'AAAA')
-    current_record = record
-    break
+  subdomains.each do |subdomain|
+    current_record = resource_records.select { |r| r['host'] == "#{subdomain}.#{domain}" && (REPLACEMENT_TYPES.include?(r['type'])) }.first
+
+    if current_record
+      if current_record['type'] == target_type
+        replace_record(current_record, domain, subdomain, ip)
+      else
+        delete_record(current_record, domain)
+        create_record(domain, subdomain, target_type, ip)
+      end
+    else
+      create_record(domain, subdomain, target_type, ip)
+    end
   end
-end
-
-if current_record
-  if current_record['type'] == target_type
-    replace_record(current_record, ip) unless current_record['value'] == ip
-  else
-    delete_record(current_record)
-    create_record(target_type, ip)
-  end
-else
-  create_record(target_type, ip)
 end
 
 puts "Completed execution at #{Time.now}"
