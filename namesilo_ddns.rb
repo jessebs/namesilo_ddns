@@ -58,8 +58,12 @@ def create_record(domain, subdomain, type, value)
 end
 
 def replace_record(current_record, domain, subdomain, value)
+  if current_record['value'] == value
+    puts "Record #{subdomain}.#{domain}  is already up to date"
+    return
+  end
+
   puts "Replacing Record #{subdomain}.#{domain} with #{value}"
-  return if current_record['value'] == value
 
   raw_response = RestClient.get 'https://www.namesilo.com/api/dnsUpdateRecord', {params: {
     version: 1,
