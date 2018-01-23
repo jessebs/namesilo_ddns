@@ -97,7 +97,20 @@ end
 
 
 #### EXECUTION ####
-response = RestClient.get 'https://api.ipify.org', {params: {format: 'json'}}
+tries = 0
+begin
+  response = RestClient.get 'https://api.ipify.org', {params: {format: 'json'}}
+rescue => e
+  if tries < 3
+    puts "Unable to request external id: #{e.message}.  Will retry."
+    tries += 1
+    sleep(tries * 10)
+    retry
+  else
+    raise e
+  end
+end
+
 response = JSON.parse(response)
 
 ip = response['ip']
