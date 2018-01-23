@@ -126,6 +126,7 @@ CONFIG['domains'].each do |domain, subdomains|
   records = get_records(domain)
   resource_records = records.dig('namesilo', 'reply', 'resource_record')
 
+  raise 'Namesilo Response Invalid.' unless resource_records
 
   subdomains.each do |subdomain|
     current_record = resource_records.select { |r| r['host'] == "#{subdomain}.#{domain}" && (REPLACEMENT_TYPES.include?(r['type'])) }.first
