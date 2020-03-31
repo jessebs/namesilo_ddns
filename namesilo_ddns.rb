@@ -27,6 +27,28 @@ raise "The following config keys are required but not set: #{undefined_keys}.  P
 API_KEY = CONFIG['api_key']
 TTL = CONFIG['ttl']
 
+def get(url, data: {}, type: :xml)
+  tries = 0
+  raw_response = RestClient.get url, data
+
+  response = case type
+             when :json
+               JSON.parse(raw_response)
+             when :xml
+               XML_PARSER.parse(raw_response)
+             end
+  raise "Unsuccessful response #{response}" unless raw_response.code == 200
+  response
+rescue
+  tries += 1
+  if tries < 3
+    sleep(tries * 10)
+    retry
+  else
+    raise
+  end
+end
+
 def get_record_type(value)
   IPAddress(value).is_a?(IPAddress::IPv4) ? 'A' : 'AAAA'
 rescue ArgumentError
@@ -35,15 +57,12 @@ end
 
 def get_records(domain)
   puts "Getting records for #{domain}"
-  raw_response = RestClient.get 'https://www.namesilo.com/api/dnsListRecords', {params: {version: 1, type: 'xml', key: API_KEY, domain: domain}}
-  response = XML_PARSER.parse(raw_response)
-  raise "Unsuccessful response #{response}" unless raw_response.code == 200
-  response
+  get 'https://www.namesilo.com/api/dnsListRecords', data: {params: {version: 1, type: 'xml', key: API_KEY, domain: domain}}
 end
 
 def create_record(domain, subdomain, type, value)
   puts "Creating Record #{type}: #{subdomain}.#{domain} => #{value}"
-  raw_response = RestClient.get 'https://www.namesilo.com/api/dnsAddRecord', {params: {
+  get 'https://www.namesilo.com/api/dnsAddRecord', data: {params: {
     version: 1,
     type: 'xml',
     key: API_KEY,
@@ -53,9 +72,6 @@ def create_record(domain, subdomain, type, value)
     rrvalue: value,
     rrttl: TTL
   }}
-  response = XML_PARSER.parse(raw_response)
-  raise "Unsuccessful response #{response}" unless raw_response.code == 200
-  response
 end
 
 def replace_record(current_record, domain, subdomain, value)
@@ -66,7 +82,7 @@ def replace_record(current_record, domain, subdomain, value)
 
   puts "Replacing Record #{subdomain}.#{domain} with #{value}"
 
-  raw_response = RestClient.get 'https://www.namesilo.com/api/dnsUpdateRecord', {params: {
+  get 'https://www.namesilo.com/api/dnsUpdateRecord', data: {params: {
     version: 1,
     type: 'xml',
     key: API_KEY,
@@ -76,43 +92,22 @@ def replace_record(current_record, domain, subdomain, value)
     rrvalue: value,
     rrttl: TTL
   }}
-  response = XML_PARSER.parse(raw_response)
-  raise "Unsuccessful response #{response}" unless raw_response.code == 200
-  response
 end
 
 def delete_record(record, domain)
   puts "Deleting Record #{record}"
-  raw_response = RestClient.get 'https://www.namesilo.com/api/dnsDeleteRecord', {params: {
+  get 'https://www.namesilo.com/api/dnsDeleteRecord', data: {params: {
     version: 1,
     type: 'xml',
     key: API_KEY,
     domain: domain,
     rrid: record['record_id'],
   }}
-  response = XML_PARSER.parse(raw_response)
-  raise "Unsuccessful response #{response}" unless raw_response.code == 200
-  response
 end
-
 
 
 #### EXECUTION ####
-tries = 0
-begin
-  response = RestClient.get 'https://api.ipify.org', {params: {format: 'json'}}
-rescue => e
-  if tries < 3
-    puts "Unable to request external id: #{e.message}.  Will retry."
-    tries += 1
-    sleep(tries * 10)
-    retry
-  else
-    raise e
-  end
-end
-
-response = JSON.parse(response)
+response = get 'https://api.ipify.org', data: {params: {format: 'json'}}, type: :json
 
 ip = response['ip']
 raise "No IP provided.  #{response}" unless ip
@@ -146,3 +141,4 @@ CONFIG['domains'].each do |domain, subdomains|
 end
 
 puts "Completed execution at #{Time.now}"
+
