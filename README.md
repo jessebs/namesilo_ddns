@@ -10,7 +10,7 @@ Either clone the repository through git or download the zip file through github
 ## Setup
 > bundle install --deployment
 
-Modify the copy config.json file that was provided to /etc/namesile_ddns/config.json and modify it
+Copy the config.json file that was provided to /etc/namesile_ddns/config.json and modify it
 with your configuration
 
 
