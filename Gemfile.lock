@@ -6,7 +6,7 @@ GEM
     http-cookie (1.0.3)
       domain_name (~> 0.5)
     ipaddress (0.8.3)
-    json (2.2.0)
+    json (2.3.0)
     mime-types (3.2.2)
       mime-types-data (~> 3.2015)
     mime-types-data (3.2018.0812)
@@ -25,7 +25,7 @@ PLATFORMS
 
 DEPENDENCIES
   ipaddress (~> 0.8)
-  json (~> 2.0)
+  json (~> 2.3)
   nori (~> 2.6)
   rest-client (~> 2.0)
 
